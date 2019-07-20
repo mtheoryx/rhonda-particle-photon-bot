@@ -1,77 +1,100 @@
-/*
- * Project rhonda-particle-photon-bot
- * Description:
- * Author:
- * Date:
- */
+#include <FastLED.h>
+FASTLED_USING_NAMESPACE;
+#define NUM_LEDS 3
+#define DATA_PIN 6
 
-// ------------
-// Blink an LED
-// ------------
+bool TURNED_ON;          //Is the led on
+unsigned int COLOR_NAME; //What color are we showing, rebbecca purple by default
 
-/*-------------
-
-We've heavily commented this code for you. If you're a pro, feel free to ignore it.
-
-Comments start with two slashes or are blocked off by a slash and a star.
-You can read them, but your device can't.
-It's like a secret message just for you.
-
-Every program based on Wiring (programming language used by Arduino, and Particle devices) has two essential parts:
-setup - runs once at the beginning of your program
-loop - runs continuously over and over
-
-You'll see how we use these in a second.
-
-This program will blink an led on and off every second.
-It blinks the D7 LED on your Particle device. If you have an LED wired to D0, it will blink that LED as well.
-
--------------*/
-
-// First, we're going to make some variables.
-// This is our "shorthand" that we'll use throughout the program:
-
-int led1 = D0; // Instead of writing D0 over and over again, we'll write led1
-// You'll need to wire an LED to this one to see it blink.
-
-int led2 = D7; // Instead of writing D7 over and over again, we'll write led2
-// This one is the little blue LED on your board. On the Photon it is next to D7, and on the Core it is next to the USB jack.
-
-// Having declared these variables, let's move on to the setup function.
-// The setup function is a standard part of any microcontroller program.
-// It runs only once when the device boots up or is reset.
+CRGB leds[NUM_LEDS];
 
 void setup()
 {
+  // LED registry requirements
+  FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
 
-  // We are going to tell our device that D0 and D7 (which we named led1 and led2 respectively) are going to be output
-  // (That means that we will be sending voltage to them, rather than monitoring voltage that comes from them)
+  // Particle led on/off
+  Particle.function("led", ledToggle);
 
-  // It's important you do this here, inside the setup() function rather than outside it or in the loop function.
+  //Particle set led color
+  Particle.function("setColor", ledColor);
 
-  pinMode(led1, OUTPUT);
-  pinMode(led2, OUTPUT);
+  // Initialize State
+  TURNED_ON = false;
 }
-
-// Next we have the loop function, the other essential part of a microcontroller program.
-// This routine gets repeated over and over, as quickly as possible and as many times as possible, after the setup function is called.
-// Note: Code that blocks for too long (like more than 5 seconds), can make weird things happen (like dropping the network connection).  The built-in delay function shown below safely interleaves required background activity, so arbitrarily long delays can safely be done if you need them.
 
 void loop()
 {
-  // To blink the LED, first we'll turn it on...
-  digitalWrite(led1, HIGH);
-  digitalWrite(led2, HIGH);
+  // if "turned on" do the thing
+  if (TURNED_ON == true)
+  {
+    for (int reps = 0; reps < 3; reps++)
+    {
+      for (int dot = 0; dot < NUM_LEDS; dot++)
+      {
+        // leds[dot] = 0xFFFFFF;
+        leds[dot] = COLOR_NAME;
+        FastLED.show();
+        delay(500);
+        // clear this led for the next time around the loop
+        leds[dot] = 0x000000;
+        delay(250);
+      }
+    }
+    TURNED_ON = false;
+    // for(int dot = 0; dot < NUM_LEDS; dot++) {
+    //     // clear this led for the next time around the loop
+    //     // essentially turn it black color
+    //     leds[dot] = 0x000000;
+    //     FastLED.show();
+    // }
+    // FastLED.show();
+  }
+  for (int dot = 0; dot < NUM_LEDS; dot++)
+  {
+    // clear this led for the next time around the loop
+    // essentially turn it black color
+    leds[dot] = 0x000000;
+  }
+  FastLED.show();
+  // } else {
+  //     for(int dot = 0; dot < NUM_LEDS; dot++) {
+  //         // clear this led for the next time around the loop
+  //         // essentially turn it black color
+  //         leds[dot] = 0x000000;
+  //     }
+  //     FastLED.show();
+  // }
+}
 
-  // We'll leave it on for 1 second...
-  delay(500);
+int ledColor(String color)
+{
+  COLOR_NAME = strtoul(color, NULL, 16);
+}
 
-  // Then we'll turn it off...
-  digitalWrite(led1, LOW);
-  digitalWrite(led2, LOW);
+// Handle cloud function call
+int ledToggle(String command)
+{
+  /* Particle.functions always take a string as an argument and return an integer.
+    Since we can pass a string, it means that we can give the program commands on how the function should be used.
+    In this case, telling the function "on" will turn the LED on and telling it "off" will turn the LED off.
+    Then, the function returns a value to us to let us know what happened.
+    In this case, it will return 1 for the LEDs turning on, 0 for the LEDs turning off,
+    and -1 if we received a totally bogus command that didn't do anything to the LEDs.
+    */
 
-  // Wait 1 second...
-  delay(500);
-
-  // And repeat!
+  if (command == "on")
+  {
+    TURNED_ON = true;
+    return 1;
+  }
+  else if (command == "off")
+  {
+    TURNED_ON = false;
+    return 0;
+  }
+  else
+  {
+    return -1;
+  }
 }
